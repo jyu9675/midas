@@ -1,0 +1,47 @@
+# MiDAS — Microbiome Data & Analysis Search
+# Institution-agnostic schema. v0.1. Seeded from a public vaginal/gut microbiome corpus; no institution-specific fields.
+
+# ---- 1. dataset record (one row per public dataset/accession) ----
+dataset:
+  dataset_id: str            # stable local id (d01…)
+  citation: str              # first-author year journal (short title)
+  pi: str                    # lab / PI
+  institution: str           # home institution (for the expansion ladder; not a hard dependency)
+  accessions: [str]          # multi-repo: PRJNA… | PRJEB… | GSE… | phs… | zenodo:ID | GenBank
+  access: enum               # open | controlled(DAA/dbGaP) | request-only | none   (TRI-STATE+)
+  host: enum                 # human | NHP | mouse | in-vitro
+  body_sites: [enum]         # vagina | cervix | rectum | gut/stool | oral | skin | nasal | neonatal
+  paired_sites: bool         # ≥2 body sites sampled per subject (needed for cross-site questions)
+  longitudinal: bool
+  assay_types: [enum]        # 16S:<region> | shotgun | isolate-WGS | long-read | scRNA | host-RNAseq | metabolomics | metatranscriptomics | spatial
+  depth: str                 # reads/sample IF stated; else "compute" (see note)
+  strain_capable: enum       # DERIVED → yes | partial | no | compute
+                             #   isolate-WGS/long-read → yes;  shotgun & depth≥~10x → yes;
+                             #   shotgun & shallow → partial;  16S → no;  shotgun & depth unknown → compute
+  n: str                     # n subjects / n samples
+  cohort: str                # population / trial
+  key_metadata: [str]        # diet | menses | pH | BV/Nugent | HIV | contraception | demographics | timepoints | dx
+  software: [str]            # pipelines used (feeds the pipeline registry)
+  code_url: str              # repo/DOI or none
+
+# ---- 2. question → required data-profile (the "resolver" rules) ----
+question_types:
+  cross_site_strain_sharing:
+    requires: [paired_sites==true, "shotgun OR isolate-WGS", strain_capable in [yes,partial], "≥2 shared species across the two sites"]
+  diet_microbiome:
+    requires: ["diet in key_metadata", "16S OR shotgun"]
+  vaginal_ecology:
+    requires: ["vagina in body_sites", "16S OR shotgun"]
+
+# ---- 3. data-profile → recommended pipeline (the "analysis stack" output) ----
+pipeline_registry:
+  shotgun_strain:   [inStrain, StrainPhlAn, StrainFacts, strainshare]   # strainshare = standardized contamination-aware interpretation layer
+  shotgun_compose:  [MetaPhlAn, HUMAnN]
+  "16S_compose":    [DADA2, QIIME2]
+  vaginal_CST:      [VALENCIA, VIRGO2]
+  contamination_qc: [CroCoDeEL, strainshare]
+  lbp_engraftment:  [StrainFacts, strainshare]
+
+# depth note: 'depth' is the field most often MISSING from papers' data-availability text.
+# MiDAS must COMPUTE it from SRA/ENA run-level metadata (bases ÷ genome size), not scrape it.
+# That makes strain_capable a computed column, not a scraped one — the key engineering finding.

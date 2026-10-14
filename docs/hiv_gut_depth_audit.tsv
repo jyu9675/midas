@@ -1,0 +1,13 @@
+accession	assay	depth_gbp	strain_capable	n	citation	study	model
+PRJNA692830	shotgun	12.55	yes	24	Zhang 2026	Whole-genome metagenomic analysis of the gut microbiome in HIV-1 on ART	HIV
+PRJNA1263627	shotgun	10.91	yes	30	Kieri 2026 (Gut Pathog)	Linking gut microbiome to HIV-1 reservoir size	HIV
+PRJEB76817	shotgun	6.72	yes	271	Català-Moll 2026 (Nat Commun)	WMGS, 2-year 2-arm ART RCT, advanced HIV-1	HIV
+PRJNA750063	shotgun	1.67	partial	38	Tanes 2021 (Viruses)	Gut microbiome changes with epithelial barrier damage	HIV
+PRJNA836336	shotgun	0.85	partial	139	Jiang 2026	Gut metagenome of MSM before/after (HIV)	HIV
+PRJNA1433876	shotgun	0.05	partial	33	Li 2026	Gut and skin microbial dysbiosis and systemic (HIV)	HIV
+PRJNA1032631	16S	NA	no	216	Flynn 2024 (Mucosal Immunol)	Translocating bacteria in progressive SIV (rhesus)	SIV
+PRJNA1051096	16S	NA	no	349	Brochu 2024 (Microbiol Spectr)	Pre-challenge gut signature predicts RhCMV/SIV vaccine outcome	SIV
+PRJNA1260450	16S	NA	no	31	Premadasa 2026	Impact of SIV and THC on jejunum microbiome	SIV
+PRJNA1234568	16S	NA	no	44	McGuire 2026	Effect of obesity on the gut microbiome (HIV)	HIV
+PRJNA1297751	16S	NA	no	135	Jiang 2026	Fecal microbiota of infants and very young (HIV-exposed)	HIV
+PRJNA1428159	16S	NA	no	136	Devadiga 2026 (Gut Microbes)	Gut microbiome sequencing of individuals (HIV)	HIV

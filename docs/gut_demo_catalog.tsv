@@ -1,0 +1,11 @@
+id	accession	citation	label	assay	depth_gbp	strain_capable	n	access	body_sites	site_resolved	hi_c
+g01	PRJNA1438274	Sommer 2026, iScience	Gut Hi-C metagenomics — plasmid & phage host-tracking (FMT)	shotgun	39.81	yes	66	open	gut	no	yes
+g02	PRJEB12357	Li et al. 2016, Science	FMT strain engraftment — donor/recipient coexistence	shotgun	4.80	yes	55	open	gut	yes	no
+g03	PRJEB50699	Raich 2025, mSystems	FMT by lyophilized oral capsules — gut shotgun	shotgun	15.45	yes	31	open	gut	no	no
+g04	PRJEB58035	Raich 2025, mSystems	Gut shotgun cohort (large)	shotgun	11.58	yes	221	open	gut	yes	no
+g05	PRJEB36140	Yan 2026, J Transl Med	Gut shotgun cohort	shotgun	7.44	yes	93	open	gut	yes	no
+g06	PRJNA1320715	Stahl 2026, Microbiome	Gut shotgun — aging & immunity	shotgun	4.15	yes	66	open	gut	no	no
+g07	ERP105624	Forster et al. 2019, Nat Biotechnol	HBC — human gut bacterial culture & genome collection (737 isolates)	isolate genomes	NA	yes	737	open	gut	yes	no
+g08	PRJNA544527	Poyet et al. 2019, Nat Med	BIO-ML — longitudinal gut multi-omics	16S+shotgun	0.56	partial	4195	open	gut;rectum;oral	yes	no
+g09	PRJNA1209112	Rashidi 2026, iScience	FMT — gut shotgun	shotgun	2.90	partial	80	open	gut	no	no
+g10	PRJEB90858	Linh 2026, npj Antimicrob Resist	Gut shared-resistome profiling	shotgun	NA	compute	101	open	gut	yes	no

@@ -1,0 +1,140 @@
+<title>HIV Suppression Gut Signal</title>
+<meta name="description" content="A replication-filtered reanalysis of a three-cohort HIV gut cohort: of 100 genera, only 2 track viral suppression across sites.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Scientific figure for an HIV gut-microbiome reanalysis. Validated data-viz palette (blue series-1) + chrome/ink tokens. */
+:root{
+  --surface:#fcfcfb; --page:#f4f4f1; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --line:#e4e3dc;
+  --series:#2a78d6; --series-soft:#9ec5f4; --dim:#c7c6c0;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --surface:#1a1a19; --page:#0d0d0d; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --baseline:#383835; --line:#2c2c2a;
+  --series:#3987e5; --series-soft:#2a5a92; --dim:#45443f;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --surface:#1a1a19; --page:#0d0d0d; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --baseline:#383835; --line:#2c2c2a;
+  --series:#3987e5; --series-soft:#2a5a92; --dim:#45443f;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);line-height:1.5;font-size:15px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding-inline:18px;padding-block:26px 44px}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 22px 18px;box-shadow:0 1px 2px rgba(0,0,0,.05),0 2px 10px rgba(0,0,0,.04)}
+h1{font-size:20px;margin:0 0 3px;letter-spacing:-.2px;text-wrap:balance}
+.src{font-size:12.5px;color:var(--ink2);margin:0}
+.src b{color:var(--ink)}
+.headline{margin:16px 0 2px;font-size:15px;color:var(--ink2);display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.headline .big{font-family:var(--mono);font-size:30px;font-weight:600;color:var(--ink);line-height:1}
+.headline .arrow{color:var(--muted);font-size:20px}
+.headline .two{color:var(--series)}
+.panel{margin-top:22px}
+.plabel{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 12px}
+.plabel b{color:var(--series);font-weight:600}
+/* Panel A — horizontal bars */
+.rowbar{display:grid;grid-template-columns:120px 1fr;align-items:center;gap:10px;margin:7px 0}
+.rowbar .cat{font-size:12.5px;color:var(--ink2);text-align:right}
+.rowbar .track{position:relative;height:24px;display:flex;align-items:center;gap:8px}
+.rowbar .bar{height:24px;border-radius:0 5px 5px 0;background:var(--dim)}
+.rowbar.robust .bar{background:var(--series)}
+.rowbar .val{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.rowbar.robust .val{color:var(--series)}
+.rowbar .tag{font-size:11px;color:var(--muted)}
+.rowbar.robust .tag{color:var(--series)}
+/* Panel B — grouped vertical bars, two taxa small multiples */
+.taxa{display:flex;gap:26px;flex-wrap:wrap}
+.taxon{flex:1;min-width:230px}
+.taxon .nm{font-size:13.5px;font-weight:600;margin:0 0 1px}
+.taxon .lin{font-size:11.5px;color:var(--muted);font-family:var(--mono);margin:0 0 10px}
+.bars{display:flex;align-items:flex-end;gap:16px;height:150px;border-bottom:1.5px solid var(--baseline);padding-top:4px}
+.col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:5px}
+.col .v{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.col .b{width:100%;max-width:46px;border-radius:5px 5px 0 0;background:var(--series-soft)}
+.col.hi .b{background:var(--series)}
+.col.hi .v{color:var(--series)}
+.xr{display:flex;gap:16px;margin-top:7px}
+.xr div{flex:1;text-align:center;font-size:11.5px;color:var(--ink2)}
+.xr div.hi{color:var(--series);font-weight:600}
+.note{font-size:12px;color:var(--muted);margin:9px 0 0}
+.take{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);font-size:13.5px;color:var(--ink);line-height:1.5}
+.take b{color:var(--series)}
+.caveat{margin-top:12px;font-size:11.5px;color:var(--muted);line-height:1.5}
+.caveat b{color:var(--ink2)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2);margin:10px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+</style>
+
+<div class="wrap">
+  <div class="fig">
+    <h1>HIV viral suppression &amp; the gut microbiome</h1>
+    <p class="src">Reanalysis of <b>Rocafort et&nbsp;al. 2024, <i>Nat Commun</i></b> (PRJEB41345) &middot; 597 stool 16S samples &middot; three cohorts (Boston, Botswana, Uganda) &middot; a different axis than the paper: which genera track viral <i>suppression</i>, filtered by cross-cohort replication.</p>
+
+    <div class="headline">
+      <span class="big">52</span><span class="arrow">&rarr;</span><span class="big two">2</span>
+      <span>genera flagged in a pooled test survive cross-cohort replication</span>
+    </div>
+
+    <!-- Panel A -->
+    <div class="panel">
+      <p class="plabel">A &nbsp;·&nbsp; Genera differing by suppression status &mdash; pooled vs <b>replicated</b></p>
+      <div class="rowbar" title="Pooled test across all people with HIV: 52 of 100 genera at q<0.1">
+        <div class="cat">Pooled (all HIV+)</div>
+        <div class="track"><div class="bar" style="width:100%"></div><span class="val">52</span></div>
+      </div>
+      <div class="rowbar" title="Botswana cohort alone: 16 genera at q<0.1">
+        <div class="cat">Botswana only</div>
+        <div class="track"><div class="bar" style="width:30.8%"></div><span class="val">16</span></div>
+      </div>
+      <div class="rowbar" title="Boston cohort alone: 9 genera at q<0.1">
+        <div class="cat">Boston only</div>
+        <div class="track"><div class="bar" style="width:17.3%"></div><span class="val">9</span></div>
+      </div>
+      <div class="rowbar robust" title="Significant and same direction in BOTH Boston and Botswana">
+        <div class="cat">Replicated (both)</div>
+        <div class="track"><div class="bar" style="width:3.85%"></div><span class="val">2</span><span class="tag">&larr; robust</span></div>
+      </div>
+      <p class="note">Of 100 prevalent genera. Uganda is excluded from this contrast &mdash; it has <b>0</b> unsuppressed subjects, which is what inflates the pooled count.</p>
+    </div>
+
+    <!-- Panel B -->
+    <div class="panel">
+      <p class="plabel">B &nbsp;·&nbsp; The two replicated taxa &mdash; mean relative abundance by HIV phenotype</p>
+      <div class="taxa">
+        <div class="taxon">
+          <p class="nm">CF231</p><p class="lin">Bacteroidales &middot; [Paraprevotellaceae]</p>
+          <div class="bars">
+            <div class="col" title="HIV-negative (n=277): 0.034%"><span class="v">0.034</span><div class="b" style="height:48.6%"></div></div>
+            <div class="col" title="Suppressed (n=224): 0.003%"><span class="v">0.003</span><div class="b" style="height:4.3%"></div></div>
+            <div class="col hi" title="Unsuppressed (n=96): 0.062%"><span class="v">0.062</span><div class="b" style="height:88.6%"></div></div>
+          </div>
+          <div class="xr"><div>HIV&minus;</div><div>Supp.</div><div class="hi">Unsupp.</div></div>
+        </div>
+        <div class="taxon">
+          <p class="nm">02d06</p><p class="lin">Clostridiales &middot; Clostridiaceae</p>
+          <div class="bars">
+            <div class="col" title="HIV-negative (n=277): 0.043%"><span class="v">0.043</span><div class="b" style="height:61.4%"></div></div>
+            <div class="col" title="Suppressed (n=224): 0.011%"><span class="v">0.011</span><div class="b" style="height:15.7%"></div></div>
+            <div class="col hi" title="Unsuppressed (n=96): 0.062%"><span class="v">0.062</span><div class="b" style="height:88.6%"></div></div>
+          </div>
+          <div class="xr"><div>HIV&minus;</div><div>Supp.</div><div class="hi">Unsupp.</div></div>
+        </div>
+      </div>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--series)"></span>unsuppressed (viremic)</span>
+        <span><span class="sw" style="background:var(--series-soft)"></span>HIV&minus; / suppressed</span>
+        <span style="color:var(--muted)">values are % of reads (median-scaled means)</span>
+      </div>
+      <p class="note">Both taxa are lowest under viral suppression and highest in unsuppressed HIV &mdash; and the direction holds in <b>both</b> Boston and Botswana independently.</p>
+    </div>
+
+    <p class="take">Requiring a signal to <b>replicate across cohorts</b> collapses an apparent 52-genus suppression effect to just two robust candidates &mdash; the rest is population structure, not ART response. A replication-first reanalysis, the same cross-validation rigor used in ML, applied to a clinical microbiome question.</p>
+    <p class="caveat"><b>Caveats:</b> reanalysis of the authors' open processed 16S table, not new data; both taxa are low-abundance (~0.01&ndash;0.06%) with Greengenes placeholder names (sequence-level follow-up needed); the suppression contrast rests on 2 of 3 cohorts (Uganda lacks unsuppressed subjects). Genus-level, Mann&ndash;Whitney + BH-FDR; replication = q&lt;0.1 in both cohorts, concordant direction. Hypothesis-generating.</p>
+  </div>
+</div>

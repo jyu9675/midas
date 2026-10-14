@@ -1,0 +1,12 @@
+{
+  "AuthenticationConfiguration": { "AccessRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/AppRunnerECRAccessRole" },
+  "AutoDeploymentsEnabled": false,
+  "ImageRepository": {
+    "ImageIdentifier": "<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/midas:latest",
+    "ImageRepositoryType": "ECR",
+    "ImageConfiguration": {
+      "Port": "8080",
+      "StartCommand": "python -u -m uvicorn server:app --host 0.0.0.0 --port 8080"
+    }
+  }
+}

@@ -1,0 +1,199 @@
+<title>MiDAS Gut Resolver</title>
+<meta name="description" content="Prototype extending MiDAS to the gut MGE / resistome / strain domain over real, depth-vetted public datasets.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: single centered column; MiDAS identity (IBM Plex + teal), light/dark via tokens */
+:root{
+  --bg:#f3f6f6; --surface:#ffffff; --surface2:#eaf0ef; --ink:#15201e; --ink2:#586a66;
+  --line:#dbe4e2; --accent:#0e7c86; --accent-ink:#0a555d; --accent-soft:#dceff0;
+  --ok:#1f8f52; --ok-bg:#e2f2e8; --warn:#9a6a12; --warn-bg:#f6ecd6; --muted:#7c8a86; --muted-bg:#e9edec;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  --r:10px; --shadow:0 1px 2px rgba(20,40,38,.06),0 2px 10px rgba(20,40,38,.04);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#0c1211; --surface:#111a19; --surface2:#17231f; --ink:#e6eeeb; --ink2:#9db0ab;
+  --line:#243330; --accent:#3bb4be; --accent-ink:#bde8ec; --accent-soft:#113033;
+  --ok:#48c17c; --ok-bg:#10301e; --warn:#d6a33c; --warn-bg:#2d2411; --muted:#7a8a85; --muted-bg:#19231f;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 2px 12px rgba(0,0,0,.25); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0c1211; --surface:#111a19; --surface2:#17231f; --ink:#e6eeeb; --ink2:#9db0ab;
+  --line:#243330; --accent:#3bb4be; --accent-ink:#bde8ec; --accent-soft:#113033;
+  --ok:#48c17c; --ok-bg:#10301e; --warn:#d6a33c; --warn-bg:#2d2411; --muted:#7a8a85; --muted-bg:#19231f;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 2px 12px rgba(0,0,0,.25); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;font-size:15px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:900px;margin:0 auto;padding-inline:20px;padding-block:28px 56px}
+a{color:var(--accent-ink)}
+.mono{font-family:var(--mono)}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;border-bottom:1px solid var(--line);padding-bottom:16px}
+.word{font-family:var(--mono);font-weight:600;font-size:28px;letter-spacing:-.5px;color:var(--ink)}
+.word b{color:var(--accent)}
+.sub{color:var(--ink2);font-size:15px;letter-spacing:.02em}
+.badge{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);background:var(--warn-bg);border-radius:20px;padding:4px 11px}
+.thesis{margin:18px 0 0;font-size:18px;font-weight:600;max-width:64ch;text-wrap:balance;line-height:1.35}
+.thesis em{color:var(--accent);font-style:normal}
+.note-line{margin:10px 0 0;font-size:13.5px;color:var(--ink2);max-width:66ch}
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 2px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px 14px;display:flex;flex-direction:column;gap:1px;min-width:92px}
+.stat .n{font-family:var(--mono);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .l{font-size:11px;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
+.panel{margin-top:20px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+.panel h2{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink2);font-weight:600}
+.panel .hint{font-size:12.5px;color:var(--ink2);margin:0 0 11px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--sans);font-size:13.5px;font-weight:500;border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:9px;padding:8px 13px;cursor:pointer;transition:.15s}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.rhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin:22px 2px 12px}
+.rhead h3{margin:0;font-size:17px}
+.rhead .count{font-family:var(--mono);font-size:13px;color:var(--ink2)}
+.results{display:flex;flex-direction:column;gap:10px}
+.row{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);border-left:3px solid var(--muted);min-width:0}
+.row.strong{border-left-color:var(--ok)} .row.ok{border-left-color:var(--accent)} .row.borderline{border-left-color:var(--warn)}
+.row .top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px}
+.row .id{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600}
+.row .cite{font-weight:600;font-size:15px}
+.row .src{font-size:12px;color:var(--ink2);margin-top:3px;font-style:italic}
+.fit{font-family:var(--mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-radius:20px;padding:2px 9px;margin-left:auto}
+.fit.strong{background:var(--ok-bg);color:var(--ok)} .fit.ok{background:var(--accent-soft);color:var(--accent-ink)} .fit.borderline{background:var(--warn-bg);color:var(--warn)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 2px}
+.tag{font-family:var(--mono);font-size:11px;font-weight:500;border-radius:6px;padding:2px 8px;border:1px solid var(--line);background:var(--surface2);color:var(--ink2);white-space:nowrap}
+.tag.open{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.tag.s-yes{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.tag.s-partial,.tag.s-compute{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.tag.hic{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.why{font-size:13px;color:var(--ink2);margin-top:8px}
+.why b{color:var(--ink);font-weight:600}
+.stack{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.stack .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);margin-right:2px}
+.stack .t{font-family:var(--mono);font-size:11.5px;background:var(--accent-soft);color:var(--accent-ink);border-radius:6px;padding:2px 8px}
+.dag{color:var(--warn);font-weight:700}
+footer{margin-top:36px;border-top:1px solid var(--line);padding-top:20px;color:var(--ink2);font-size:12.5px}
+footer b{color:var(--ink)}
+footer p{margin:6px 0;max-width:72ch}
+footer .mono{font-size:11.5px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="word">Mi<b>DAS</b></div>
+    <div class="sub">Gut MGE / Resistome resolver</div>
+    <span class="badge">prototype</span>
+  </header>
+
+  <p class="thesis">The same engine, pointed at the <em>gut functional</em> world: ask a plasmid,
+  resistance-gene, or strain-tracking question and get the public datasets that can answer it &mdash;
+  each <em>depth-vetted</em> for whether the sequencing is deep enough to do the work.</p>
+  <p class="note-line">Ten open human-gut datasets, found by literature discovery (EuropePMC), cited, and vetted
+  from ENA run-level bases. It mixes landmark cohorts (Li 2016 FMT strain engraftment, Poyet BIO-ML, the Forster
+  HBC isolate collection) with recent studies, and extends MiDAS beyond its mucosal catalog into gut mobile genetic
+  elements, resistance genes, and strain-level analysis.</p>
+
+  <div class="stats" id="stats"></div>
+
+  <section class="panel">
+    <h2>Resolve a gut-functional question</h2>
+    <p class="hint">Pick the kind of analysis you have in mind. Each dataset is scored for fit and paired with the tools to run.</p>
+    <div class="chips" id="chips">
+      <button class="chip" data-q="mge" aria-pressed="true">plasmid / MGE host-tracking</button>
+      <button class="chip" data-q="resistome" aria-pressed="false">antibiotic-resistance gene profiling</button>
+      <button class="chip" data-q="strain" aria-pressed="false">strain-level gut tracking</button>
+    </div>
+  </section>
+
+  <div class="rhead"><h3 id="rtitle"></h3><span class="count" id="rcount"></span></div>
+  <div class="results" id="results"></div>
+
+  <footer>
+    <p><b>Prototype, not a finished catalog.</b> Ten datasets, discovered and vetted automatically to show the
+    method works in this domain; a production version would be larger and hand-curated. Depth is computed from
+    ENA run-level bases (WGS-filtered), so a dataset can be shotgun yet only <span class="mono">partial</span>.
+    Isolate-genome collections (HBC) are strain-resolved by construction, so they skip the depth bar. Curation
+    matters: a non-human (animal) resistome dataset the discovery returned was excluded by hand.</p>
+    <p><span class="dag">&dagger;</span> body site inferred from the source study; ENA metadata left it unresolved,
+    so it would pass through human review. <span class="mono">compute</span> = depth unresolved, verify before trusting.</p>
+    <p class="mono" id="prov"></p>
+  </footer>
+</div>
+
+<script>
+const DATA=[
+ {id:"g01",acc:"PRJNA1438274",label:"Gut Hi-C metagenomics — plasmid & phage host-tracking (FMT)",cite:"Sommer 2026, iScience",assay:"shotgun",depth:39.81,strain:"yes",n:66,access:"open",site:"gut",sr:false,hic:true},
+ {id:"g02",acc:"PRJEB12357",label:"FMT strain engraftment — donor/recipient coexistence",cite:"Li et al. 2016, Science",assay:"shotgun",depth:4.80,strain:"yes",n:55,access:"open",site:"gut",sr:true,hic:false},
+ {id:"g03",acc:"PRJEB50699",label:"FMT by lyophilized oral capsules — gut shotgun",cite:"Raich 2025, mSystems",assay:"shotgun",depth:15.45,strain:"yes",n:31,access:"open",site:"gut",sr:false,hic:false},
+ {id:"g04",acc:"PRJEB58035",label:"Gut shotgun cohort (large)",cite:"Raich 2025, mSystems",assay:"shotgun",depth:11.58,strain:"yes",n:221,access:"open",site:"gut",sr:true,hic:false},
+ {id:"g05",acc:"PRJEB36140",label:"Gut shotgun cohort",cite:"Yan 2026, J Transl Med",assay:"shotgun",depth:7.44,strain:"yes",n:93,access:"open",site:"gut",sr:true,hic:false},
+ {id:"g06",acc:"PRJNA1320715",label:"Gut shotgun — aging & immunity",cite:"Stahl 2026, Microbiome",assay:"shotgun",depth:4.15,strain:"yes",n:66,access:"open",site:"gut",sr:false,hic:false},
+ {id:"g07",acc:"ERP105624",label:"HBC — human gut bacterial culture & genome collection (737 isolates)",cite:"Forster et al. 2019, Nat Biotechnol",assay:"isolate genomes",depth:null,strain:"yes",n:737,access:"open",site:"gut",sr:true,hic:false,iso:true},
+ {id:"g08",acc:"PRJNA544527",label:"BIO-ML — longitudinal gut multi-omics",cite:"Poyet et al. 2019, Nat Med",assay:"16S + shotgun",depth:0.56,strain:"partial",n:4195,access:"open",site:"gut;rectum;oral",sr:true,hic:false},
+ {id:"g09",acc:"PRJNA1209112",label:"FMT — gut shotgun",cite:"Rashidi 2026, iScience",assay:"shotgun",depth:2.90,strain:"partial",n:80,access:"open",site:"gut",sr:false,hic:false},
+ {id:"g10",acc:"PRJEB90858",label:"Gut shared-resistome profiling",cite:"Linh 2026, npj Antimicrob Resist",assay:"shotgun",depth:null,strain:"compute",n:101,access:"open",site:"gut",sr:true,hic:false}
+];
+const el=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const RANK={strong:0,ok:1,borderline:2,no:9};
+const shot=r=>r.assay.indexOf("shotgun")>=0;
+const dep=r=>(typeof r.depth==="number")?r.depth:-1;
+
+const AXES={
+ mge:{name:"Plasmid / MGE host-tracking",
+   stack:["geNomad","MobileElementFinder","mobileOG-db","inStrain"],
+   fit:r=>r.iso?"strong":(!shot(r)?"no":(r.strain==="yes"?(dep(r)>=8?"strong":"ok"):(r.strain==="partial"||r.strain==="compute"?"borderline":"no"))),
+   why:r=>{if(r.iso)return "isolate reference genomes — anchor plasmid/MGE → host assignment and typing";
+     let d=dep(r)>=0?dep(r).toFixed(1)+" Gbp/sample":"depth unresolved";
+     return r.hic?("Hi-C proximity ligation — links plasmids/MGEs directly to host genomes; "+d)
+       :("deep shotgun supports plasmid/MGE → host assignment; "+d);}},
+ resistome:{name:"Antibiotic-resistance gene profiling",
+   stack:["AMRFinderPlus","RGI / CARD","deepARG"],
+   fit:r=>(r.iso||shot(r))?"strong":"no",
+   why:r=>r.iso?"reference genomes — curated resistome / ARG catalog with host context"
+     :"shotgun — resistome gene detection; strain-level ARG host-linking scales with depth ("+(dep(r)>=0?dep(r).toFixed(1)+" Gbp":"unresolved")+")"},
+ strain:{name:"Strain-level gut tracking",
+   stack:["inStrain","StrainPhlAn","StrainGE","strainshare"],
+   fit:r=>r.iso?"strong":(!shot(r)?"no":(r.strain==="yes"?"strong":(r.strain==="partial"||r.strain==="compute"?"borderline":"no"))),
+   why:r=>{if(r.iso)return "isolate genomes — strain-level references by construction (no depth bar)";
+     if(r.strain==="yes")return "strain=yes — "+dep(r).toFixed(1)+" Gbp/sample, SNV-level tracking feasible";
+     if(r.strain==="compute")return "depth unresolved — verify before strain claims";
+     return "strain=partial — "+(dep(r)>=0?dep(r).toFixed(1)+" Gbp":"shallow")+"; confirm per-species coverage";}}
+};
+
+function renderStats(){
+  const yes=DATA.filter(r=>r.strain==="yes").length;
+  const deepest=Math.max(...DATA.map(dep));
+  const tiles=[[DATA.length,"gut datasets"],[yes,"strain-capable"],["100%","open access"],[deepest.toFixed(0)+" Gbp","deepest"]];
+  el("stats").innerHTML=tiles.map(([n,l])=>`<div class="stat"><span class="n">${n}</span><span class="l">${l}</span></div>`).join("");
+  el("prov").textContent="catalog: "+DATA.length+" public gut datasets · depth computed from ENA run-level bases (WGS-filtered) · discovered via EuropePMC.";
+}
+function tag(cls,txt){return `<span class="tag ${cls}">${esc(txt)}</span>`;}
+function siteTxt(r){return esc(r.site)+(r.sr?"":' <span class="dag">†</span>');}
+function resolve(q){
+  const ax=AXES[q];
+  const hits=DATA.map(r=>({r,fit:ax.fit(r)})).filter(x=>x.fit!=="no");
+  hits.sort((a,b)=>RANK[a.fit]-RANK[b.fit]||dep(b.r)-dep(a.r));
+  el("rtitle").textContent=ax.name;
+  el("rcount").textContent=hits.length+" of "+DATA.length+" datasets compatible";
+  el("results").innerHTML="";
+  hits.forEach(({r,fit})=>{
+    const sc="s-"+r.strain;
+    const depTag=r.iso?tag("s-yes","strain: yes · isolates"):((dep(r)>=0)?tag(sc,"strain: "+r.strain+" · "+dep(r).toFixed(1)+" Gbp"):tag(sc,"strain: "+r.strain));
+    const stack=[...ax.stack];
+    if(q==="mge"&&r.hic)stack.splice(3,0,"bin3C / HiCzin");
+    const div=document.createElement("div");div.className="row "+fit;
+    div.innerHTML=`<div class="top"><span class="id">${esc(r.id)}</span><span class="cite">${esc(r.label)}</span>
+        <span class="fit ${fit}">${fit}</span></div>
+      <div class="src">${esc(r.cite)}</div>
+      <div class="tags">${tag("open","open")}${depTag}${tag("","sites: "+siteTxt(r))}${tag("",esc(r.assay))}${tag("","n="+r.n)}<span class="tag mono">${esc(r.acc)}</span></div>
+      <div class="why"><b>fit:</b> ${esc(ax.why(r))}</div>
+      <div class="stack"><span class="lbl">stack</span>${stack.map(t=>`<span class="t">${esc(t)}</span>`).join("")}</div>`;
+    el("results").appendChild(div);
+  });
+}
+function setActive(q){document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.q===q));}
+document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{setActive(c.dataset.q);resolve(c.dataset.q);}));
+renderStats();resolve("mge");
+</script>

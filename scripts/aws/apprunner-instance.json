@@ -1,0 +1,1 @@
+{ "Cpu": "0.25 vCPU", "Memory": "1 GB", "InstanceRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/MiDASInstanceRole" }

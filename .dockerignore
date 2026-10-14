@@ -1,0 +1,22 @@
+# keep dev/test/doc files OUT of the deployed image (the Dockerfile COPYs only what the app needs)
+INGEST_SCOPE.md
+README.md
+demo_gut.html
+demo_hiv.html
+demo_rehermann.html
+figure_hiv_suppression.html
+docs/
+candidates.tsv
+enrich.py
+promote.py
+hydrate_depth.py
+test_resolver.py
+midas.py
+datasets.json
+scripts/
+.git/
+.gitignore
+.gitattributes
+__pycache__/
+*.pyc
+DEPLOY.md
