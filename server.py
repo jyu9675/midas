@@ -82,7 +82,7 @@ def ingest(accession: str = Query(..., pattern=r"^PRJ[EN][AB]\d+$")):
 
 # ---- contact form -> email via SES ----------------------------------------
 CONTACT_TO   = os.environ.get("MIDAS_CONTACT_TO", "you@example.com")   # override at deploy via MIDAS_CONTACT_TO
-CONTACT_FROM = os.environ.get("MIDAS_CONTACT_FROM", "MiDAS <midas@nuwaslab.com>")
+CONTACT_FROM = os.environ.get("MIDAS_CONTACT_FROM", "MiDAS <noreply@nuwaslab.com>")
 SES_REGION   = os.environ.get("MIDAS_SES_REGION", "us-east-1")
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _TOPICS = {"question": "Question", "feature": "Feature request", "other": "Other"}

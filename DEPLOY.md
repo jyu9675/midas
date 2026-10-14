@@ -90,7 +90,8 @@ aws lightsail push-container-image --service-name midas --label midas --image mi
 ## 4. Contact form (Amazon SES)
 `POST /api/contact` emails each submission via SES (honeypot + per-IP rate limit + size caps). Setup done:
 - **Identities** (us-east-1): domain `nuwaslab.com` verified via Easy DKIM (3 CNAMEs in Route 53) so mail sends
-  from `midas@nuwaslab.com`; recipient `<your-verified-email>` verified (SES **sandbox** only delivers to verified
+  from `noreply@nuwaslab.com` (send-only; the domain is SES-verified, so any `@nuwaslab.com` from-address works
+  without an MX record); recipient `<your-verified-email>` verified (SES **sandbox** only delivers to verified
   addresses — to email anyone, request production access).
 - **Permission**: App Runner service runs with instance role `MiDASInstanceRole` (inline `ses:SendEmail`), set via
   `InstanceRoleArn` in `scripts/aws/apprunner-instance.json`.
