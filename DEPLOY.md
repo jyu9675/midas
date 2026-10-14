@@ -95,7 +95,19 @@ aws lightsail push-container-image --service-name midas --label midas --image mi
   addresses — to email anyone, request production access).
 - **Permission**: App Runner service runs with instance role `MiDASInstanceRole` (inline `ses:SendEmail`), set via
   `InstanceRoleArn` in `scripts/aws/apprunner-instance.json`.
-- **Config** (env, with defaults baked in): `MIDAS_CONTACT_TO`, `MIDAS_CONTACT_FROM`, `MIDAS_SES_REGION`.
+- **Required env vars** — the code defaults are placeholders (no personal email in the public repo), so set these
+  on the service (App Runner → Configuration → Environment variables, or `ImageConfiguration.RuntimeEnvironmentVariables`
+  in the source config):
+  - `MIDAS_CONTACT_TO` — where submissions are emailed (your verified recipient). Code default: `you@example.com`.
+  - `MIDAS_CONTACT_FROM` — the send-only From, e.g. `MiDAS <noreply@nuwaslab.com>` (any address on the verified domain). Code default: `MiDAS <noreply@nuwaslab.com>`.
+  - `MIDAS_SES_REGION` — SES region. Code default: `us-east-1`.
+
+  **Keep them across deploys:** these live in the App Runner *service* config, so a plain `start-deployment` (new
+  `:latest` image) preserves them — but a config-style `update-service --source-configuration` **replaces**
+  `RuntimeEnvironmentVariables`, so re-include both in that call or the form silently reverts to the placeholders.
+
+> **Note on `scripts/aws/`:** the deploy configs are templated with `<ACCOUNT_ID>` — replace it with your AWS
+> account ID before using them (the `push_to_ecr.sh` / `deploy_apprunner.sh` scripts resolve the account dynamically).
 
 ## Cost (low traffic)
 - App Runner: ~$5–25/mo (scales toward the low end when idle). Lightsail nano container: ~$7–10/mo flat.
