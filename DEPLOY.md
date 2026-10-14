@@ -17,7 +17,7 @@ One FastAPI app (`server.py`) serves the UI (`static/index.html`) **and** the li
 (runs the Python container, custom domain + automatic TLS, scales toward ~$0 when idle). Domain:
 **nuwaslab.com** (recommended target `midas.nuwaslab.com`). Validated locally as both `uvicorn server:app`
 and the built Docker image: all endpoints return correctly, discover de-dups, and the image contains only
-public files (no PITCH.md / dev scripts).
+public files (no dev scripts or docs).
 
 ## 0. Run locally first
 ```bash
@@ -31,7 +31,7 @@ uvicorn server:app --port 8080
 docker build -t midas .
 docker run -p 8080:8080 midas     # test at http://localhost:8080
 ```
-`.dockerignore` keeps internal files OUT of the image (PITCH.md, dev scripts, candidates.tsv). The image
+`.dockerignore` keeps dev/doc files OUT of the image (dev scripts, docs, candidates.tsv). The image
 contains only: server.py, discover.py, ingest.py, datasets*.tsv, static/.
 
 ---
@@ -40,8 +40,7 @@ contains only: server.py, discover.py, ingest.py, datasets*.tsv, static/.
 
 **Recommended path = App Runner pulling a container image from ECR.** (App Runner's *other* source type,
 "source code from GitHub", does NOT build your Dockerfile — it uses App Runner's managed Python runtime with
-an `apprunner.yaml` and checks out the whole repo. ECR is how a Dockerfile-based image deploys, and it keeps
-PITCH.md off the server entirely.)
+an `apprunner.yaml` and checks out the whole repo. ECR is how a Dockerfile-based image deploys.)
 
 **IAM / Identity Center.** An EC2-only policy is not enough. On the Identity Center **permission set** assigned
 to you (this is your own lab account), use `AdministratorAccess` for first-time setup, or attach least-privilege:
@@ -121,4 +120,4 @@ aws lightsail push-container-image --service-name midas --label midas --image mi
 - **Catalog is baked into the image** (datasets_hydrated.tsv snapshot). It grows via the local pipeline
   (`promote.py` → commit → re-run `scripts/push_to_ecr.sh` → redeploy). For a continuously-updating catalog,
   move it to S3/DynamoDB and have `server.py` read from there.
-- The deployed site is institution-neutral by design; keep PITCH.md (internal strategy) out of the image.
+- The deployed site is institution-neutral by design; keep internal/dev files out of the image.

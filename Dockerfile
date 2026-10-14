@@ -2,7 +2,7 @@ FROM python:3.11-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-# copy only what the portal needs (see .dockerignore — PITCH.md etc. are excluded)
+# copy only what the portal needs (see .dockerignore)
 COPY server.py discover.py ingest.py datasets.tsv datasets_hydrated.tsv ./
 COPY static ./static
 EXPOSE 8080
