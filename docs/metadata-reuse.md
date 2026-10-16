@@ -47,7 +47,7 @@ is MiDAS's niche. Four moves:
   resolver filters by trust ("curated disease only" vs "include inferred, conf>0.8"). Honesty as a feature.
 - **C. Resolve-time comparability score.** Flip batch correction from post-hoc to upfront: at discovery,
   output "these N cohorts are ~X% comparable on your needed fields; batch-effect risk Y; correctable via
-  ConQuR / MMUPHin."
+  ConQuR / MMUPHin." **← prototyped: `comparability.py`.**
 - **D. Self-validated inference with abstention.** Address the generalization caution directly: infer a
   field only when calibrated-confident, and **validate each inferred field against the datasets that *did*
   deposit it** (per-repo self-check), reporting measured accuracy — never an opaque guess.
@@ -73,10 +73,24 @@ This is a capability none of the existing tools offer: not predicting metadata, 
 metadata against the data** — and it instantiates triangulation + provenance + abstention in one small,
 defensible increment.
 
+## Prototype — comparability score (`comparability.py`, move C)
+
+Given two normalized `Dataset` records, `compare(a, b, need=[...])` returns a **poolability** score (0–1)
+with per-dimension subscores, the *limiting factor*, a batch-risk level + recommended correction, and
+caveats. Alignment gates (host / body site / assay) dominate — a mismatch there can't be rescued by
+metadata — while metadata overlap (of the question's `need` fields) modulates. `rank_comparable(target,
+candidates)` orders a resolver's hits by poolability.
+
+**Validated** (`test_comparability.py`): two gut shotgun studies with shared metadata pool at **0.88**
+(batch "medium", same uniformly-processed repo); a gut **16S vs shotgun** pair drops to **0.15** (limited
+by assay, batch "high" cross-repo); a **gut vs vaginal** pair is **0.00** (blocked by body site, not
+rescuable). This is the discovery-time "can I even pool these, and how?" decision, before any download.
+
 ## Roadmap
 1. Extend triangulation beyond body site (host species, assay type, westernization proxy) — same pattern.
 2. Attach provenance/trust to every field in the cross-repo record (move B), filterable in the resolver.
-3. A resolve-time comparability score (move C), wiring in a batch-effect-risk estimate.
+3. ~~A resolve-time comparability score (move C)~~ — **built (`comparability.py`)**; next, fold the
+   per-feature batch-risk estimate deeper (platform/pipeline when recorded) and surface it in the resolver.
 4. Self-validated inference with per-repo accuracy and abstention (move D).
 
 ## Honest risks
