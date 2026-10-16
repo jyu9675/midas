@@ -21,6 +21,7 @@ next — see docs/crossrepo.md. Stdlib only (urllib + json), like the rest of Mi
 """
 from __future__ import annotations
 import json
+import os
 import re
 import sys
 import urllib.parse
@@ -265,9 +266,184 @@ class NMDC(Adapter):
         ds.body_sites = sorted(sites)[:4]
 
 
+# --------------------------------------------------------------------------- ENA adapter
+
+class ENA(Adapter):
+    """EBI/ENA via the Portal API. Human metagenomic read_runs grouped to studies. ENA's structured
+    sample fields are frequently empty/'missing' — which is itself the honest metadata-coverage signal."""
+    name = "ena"
+    PORTAL = "https://www.ebi.ac.uk/ena/portal/api/search"
+    _SITE = {"gut": "feces", "stool": "feces", "faecal": "feces", "fecal": "feces",
+             "vagina": "vagina", "vaginal": "vagina", "oral": "oral mucosa", "skin": "skin", "nasal": "nasal"}
+    _EMPTY = {"", "missing", "not collected", "not provided", "n/a", "na", "none", "unknown"}
+    _FIELDS = ("study_accession,sample_accession,study_title,library_strategy,"
+               "host_body_site,collection_date,country,host_sex,host_tax_id")
+
+    def search(self, query: str, limit: int = 5, timeout: int = 30) -> list:
+        q = query.lower()
+        base = ['tax_tree(9606)', 'library_source="METAGENOMIC"']
+        site = next((v for k, v in self._SITE.items() if k in q), None)
+        # try site-filtered first (precision); fall back unfiltered since ENA's body-site field is sparse
+        for cons in ([base + [f'host_body_site="{site}"']] if site else []) + [base]:
+            params = {"result": "read_run", "query": " AND ".join(cons),
+                      "fields": self._FIELDS, "limit": str(limit * 40), "format": "json"}
+            # ENA's portal requires %20 for spaces in `query`, not urlencode's default '+'
+            qs = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
+            try:
+                runs = get_json(self.PORTAL + "?" + qs, timeout)
+            except Exception:
+                runs = []
+            studies = {}
+            for r in runs if isinstance(runs, list) else []:
+                sa = r.get("study_accession")
+                if sa:
+                    studies.setdefault(sa, []).append(r)
+            if studies:
+                return [self._study(sa, rs) for sa, rs in list(studies.items())[:limit]]
+        return []
+
+    def _study(self, sa: str, rs: list) -> Dataset:
+        raw, sites, strat = set(), set(), set()
+        for r in rs:
+            for key in ("collection_date", "country", "host_body_site", "host_sex", "host_tax_id"):
+                v = str(r.get(key) or "").strip()
+                if v and v.lower() not in self._EMPTY:
+                    raw.add(key)
+            bs = str(r.get("host_body_site") or "").strip()
+            if bs and bs.lower() not in self._EMPTY:
+                sites.add(bs)
+            if r.get("library_strategy"):
+                strat.add(r["library_strategy"].upper())
+        assay = []
+        joined = " ".join(strat)
+        if "WGS" in joined or "METAGENOM" in joined or "OTHER" in joined:
+            assay.append("shotgun")
+        if "AMPLICON" in joined:
+            assay.append("16S")
+        ds = Dataset(source_repo=self.name, accession=sa,
+                     title=(rs[0].get("study_title") or "")[:120],
+                     url=f"https://www.ebi.ac.uk/ena/browser/view/{sa}", host="human", access="open",
+                     n_samples=len({r.get("sample_accession") for r in rs}),
+                     assay_types=assay or ["unknown"])
+        ds.raw_metadata_keys = sorted(raw)
+        ds.metadata_fields = normalize_metadata(raw)
+        ds.body_sites = sorted(sites)[:4]
+        return ds
+
+
+# --------------------------------------------------------------------------- dbGaP adapter (discovery)
+
+class dbGaP(Adapter):
+    """NCBI dbGaP via E-utilities. Controlled access: sample/phenotype metadata is GOVERNED and not
+    fetchable without authorization, so this adapter is discovery-only — it finds studies and marks them
+    `controlled` with the application link. `metadata_fields` is intentionally empty (governed)."""
+    name = "dbgap"
+    EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+
+    def search(self, query: str, limit: int = 5, timeout: int = 30) -> list:
+        term = urllib.parse.quote(query)
+        try:
+            es = get_json(f"{self.EUTILS}/esearch.fcgi?db=gap&term={term}&retmax={limit}&retmode=json", timeout)
+            ids = es.get("esearchresult", {}).get("idlist", [])
+            if not ids:
+                return []
+            summ = get_json(f"{self.EUTILS}/esummary.fcgi?db=gap&id={','.join(ids)}&retmode=json", timeout)
+        except Exception:
+            return []
+        res = summ.get("result", {})
+        out = []
+        for uid in res.get("uids", []):
+            r = res.get(uid, {})
+            title = (r.get("d_study_name") or r.get("title") or r.get("summary")
+                     or f"dbGaP record {uid}")
+            acc = r.get("accession") or r.get("d_study_id") or uid
+            out.append(Dataset(
+                source_repo=self.name, accession=str(acc), title=str(title)[:120],
+                url=f"https://www.ncbi.nlm.nih.gov/gap/?term={term}",
+                host="unknown", access="controlled", n_samples=0,
+                raw_metadata_keys=["(governed — apply via dbGaP)"], metadata_fields=set(),
+                extra={"note": "dbGaP sample/phenotype metadata is controlled; discovery only"}))
+        return out[:limit]
+
+
+# --------------------------------------------------------------------------- curatedMetagenomicData
+
+class CMD(Adapter):
+    """curatedMetagenomicData — the richest *harmonized human* metadata, but R-package data with no clean
+    no-auth download. This adapter reads a local `sampleMetadata` TSV EXPORT (set MIDAS_CMD_TSV, or pass
+    `tsv=`); `write_cmd_export_R()` emits the one-line R script that produces it. Groups by study_name and
+    reports each column that is populated as a metadata field."""
+    name = "cmd"
+
+    def __init__(self, tsv: str | None = None):
+        self.tsv = tsv or os.environ.get("MIDAS_CMD_TSV", "")
+
+    def search(self, query: str, limit: int = 5, timeout: int = 30) -> list:
+        import csv
+        if not self.tsv or not os.path.exists(self.tsv):
+            return []
+        with open(self.tsv, newline="", encoding="utf-8-sig") as fh:
+            rows = list(csv.DictReader(fh, delimiter="\t"))
+        if not rows:
+            return []
+        cols = list(rows[0].keys())
+        terms = [t for t in re.split(r"\W+", query.lower()) if len(t) > 2]
+        studies = {}
+        for r in rows:
+            sn = r.get("study_name") or r.get("studyID") or "unknown_study"
+            studies.setdefault(sn, []).append(r)
+        out = []
+        for sn, rs in studies.items():
+            hay = (sn + " " + " ".join(str(rs[0].get(c, "")) for c in
+                   ("body_site", "disease", "study_condition", "country"))).lower()
+            if terms and not any(t in hay for t in terms):
+                continue
+            present = {c for c in cols if any(str(rr.get(c) or "").strip() not in ("", "NA")
+                                              for rr in rs[:50])}
+            ds = Dataset(source_repo=self.name, accession=sn, title=sn,
+                         url="https://waldronlab.io/curatedMetagenomicData/", host="human",
+                         access="open", n_samples=len(rs), assay_types=["shotgun"])
+            ds.raw_metadata_keys = sorted(present)
+            ds.metadata_fields = normalize_metadata(present)
+            ds.body_sites = sorted({str(rr.get("body_site")) for rr in rs if rr.get("body_site")})[:4]
+            out.append(ds)
+        out.sort(key=lambda d: (len(d.metadata_fields), d.n_samples), reverse=True)
+        return out[:limit]
+
+
+def write_cmd_export_R(out_path: str) -> str:
+    """Emit the one-line R that exports cMD's harmonized sampleMetadata to the TSV this adapter reads."""
+    script = ('#!/usr/bin/env Rscript\n'
+              '# install once: BiocManager::install("curatedMetagenomicData")\n'
+              'suppressMessages(library(curatedMetagenomicData))\n'
+              'write.table(sampleMetadata, "cmd_sampleMetadata.tsv", sep = "\\t",\n'
+              '            quote = FALSE, row.names = FALSE)\n'
+              '# then: MIDAS_CMD_TSV=cmd_sampleMetadata.tsv python crossrepo.py "<q>" --repos cmd\n')
+    with open(out_path, "w", newline="\n", encoding="utf-8") as fh:
+        fh.write(script)
+    return out_path
+
+
+# --------------------------------------------------------------------------- Qiita (redbiom) — scaffold
+
+class Qiita(Adapter):
+    """Qiita, via redbiom (metadata/feature search over Qiita + EMP). redbiom needs a reachable context
+    server (env REDBIOM_HOST, default the public UCSD one). It was NOT reachable from this build
+    environment, so this adapter is a documented scaffold: it returns [] gracefully rather than fabricate
+    redbiom's wire format. Much Qiita content is also deposited to ENA/EBI, which the ENA/MGnify adapters
+    already index. To finish live: implement the redbiom metadata-category query against a reachable host
+    and normalize its sample-metadata categories through `normalize_metadata` (same as every adapter)."""
+    name = "qiita"
+    HOST = os.environ.get("REDBIOM_HOST", "https://redbiom.ucsd.edu")
+
+    def search(self, query: str, limit: int = 5, timeout: int = 30) -> list:
+        return []   # honest no-op until a reachable redbiom context is wired (see docstring)
+
+
 # --------------------------------------------------------------------------- registry + cross search
 
-ADAPTERS = {MGnify.name: MGnify(), NMDC.name: NMDC()}
+ADAPTERS = {MGnify.name: MGnify(), NMDC.name: NMDC(), ENA.name: ENA(),
+            dbGaP.name: dbGaP(), CMD.name: CMD(), Qiita.name: Qiita()}
 
 
 def cross_search(query: str, need=(), repos=("mgnify",), limit: int = 5, timeout: int = 30) -> list:

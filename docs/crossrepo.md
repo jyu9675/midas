@@ -34,23 +34,32 @@ hits = cross_search("human gut microbiome", need=["disease", "diet"], repos=["mg
 
 ## Built vs. staged
 
-**Built & live:**
-- **MGnify** adapter — EBI metagenomics, open REST JSON:API. Aggregates per-sample structured fields +
-  the free key/value `sample-metadata` across a study's samples, infers host (human via host-tax-id
-  9606) and body sites, normalizes to the canonical vocabulary.
-- **NMDC** adapter — National Microbiome Data Collaborative, open REST. Client-side matches studies by
-  query terms, then pulls biosamples via `associated_studies`, resolving NMDC's nested ENVO value
-  objects (`{"term":{"name":...},"has_raw_value":"ENVO:..."}`) to readable body sites. Environmental-heavy
-  (soil/water/engineered) but adds real breadth.
-- The canonical vocabulary + coverage query + CLI. Both adapters validated live and by offline fixtures
-  (`test_crossrepo.py`); one query spans both sources into one normalized record set.
+**Built & live (open REST, no auth):**
+- **MGnify** — EBI metagenomics JSON:API; aggregates per-sample structured fields + the free key/value
+  `sample-metadata`, infers host (human via host-tax-id 9606) and body sites.
+- **NMDC** — National Microbiome Data Collaborative; matches studies by query terms, pulls biosamples via
+  `associated_studies`, resolves NMDC's nested ENVO value objects
+  (`{"term":{"name":...},"has_raw_value":"ENVO:..."}`) to readable body sites. Environmental-heavy.
+- **ENA** — EBI/ENA Portal; human metagenomic `read_run`s grouped to studies (body-site-filtered with a
+  fallback, since ENA's `host_body_site` is sparsely populated — itself the honest coverage signal).
+  Note: the portal requires `%20` for spaces in `query`, not `+`.
+- **dbGaP** — NCBI E-utilities, **discovery-only**: sample/phenotype metadata is *governed*, so the
+  adapter finds studies, marks them `controlled` with the application link, and keeps `metadata_fields`
+  **empty** — a `--need` query never returns a dbGaP study as if it carried the metadata.
 
-**Staged (the interface is ready; each is a drop-in adapter):**
-- **ENA** — MiDAS already queries it for run-level depth; formalize as an adapter so capability
-  (`strain_capable`) and metadata come through the same record.
-- **curatedMetagenomicData** — the richest *harmonized human* metadata, but R-package data; integrate via
-  the R-export pattern (a small script dumps `sampleMetadata` to TSV, the adapter reads it).
-- **Qiita** — metadata via `redbiom`; **dbGaP** — controlled, metadata behind governance.
+All four validated live and by offline fixtures (`test_crossrepo.py`); one query spans them into one
+normalized record set.
+
+**Built, needs a local export (no clean no-auth path):**
+- **curatedMetagenomicData** — the richest *harmonized human* metadata, but R-package data.
+  `write_cmd_export_R()` emits the one-line R that dumps `sampleMetadata` to TSV; set `MIDAS_CMD_TSV` and
+  the adapter groups it by study and reports each populated column. The crown jewel once exported.
+
+**Scaffolded (source not reachable from this build environment):**
+- **Qiita** — via `redbiom`; the public redbiom server was unreachable here, so the adapter is a
+  documented no-op (returns `[]`) rather than fabricate redbiom's wire format. Much Qiita content is also
+  deposited to ENA/EBI (already indexed). To finish: wire the redbiom metadata-category query against a
+  reachable `REDBIOM_HOST` and normalize its categories through the same `normalize_metadata`.
 
 ## Honest limits
 

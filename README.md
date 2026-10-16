@@ -37,10 +37,11 @@ Stated plainly so the live catalog isn't mistaken for the full vision:
 - Auto-ingest pipeline (discover → hydrate → enrich → promote) with a human review gate.
 
 **Roadmap (the metadata-resolver vision — partly started; don't infer the rest from the live catalog):**
-- **Cross-repository indexing** — *started* (`crossrepo.py`): live **MGnify** and **NMDC** adapters + a
-  canonical metadata vocabulary + a "which datasets carry fields X, Y, Z" coverage query, spanning both
-  sources from one query. ENA, curatedMetagenomicData (via R export), and Qiita (redbiom) are drop-in
-  next. See [docs/crossrepo.md](docs/crossrepo.md).
+- **Cross-repository indexing** — built (`crossrepo.py`): live **MGnify + NMDC + ENA** adapters +
+  **dbGaP** discovery (controlled) + a canonical metadata vocabulary + a "which datasets carry fields
+  X, Y, Z" coverage query, spanning sources from one query. **curatedMetagenomicData** via a one-line R
+  export (`MIDAS_CMD_TSV`); **Qiita**/redbiom scaffolded (server not reachable here). See
+  [docs/crossrepo.md](docs/crossrepo.md).
 - **Metadata-coverage resolver** — answer "which datasets carry fields X, Y, Z" (phenotype / clinical /
   diet / host / exposure) and flag how comparable those fields are across studies, since missing and
   inconsistent metadata is the field's main blocker to cross-study reuse.
@@ -50,7 +51,7 @@ Stated plainly so the live catalog isn't mistaken for the full vision:
 ## Files
 - `server.py` — FastAPI app: the UI (`static/`) + the live API (`/api/datasets`, `/api/discover`, `/api/ingest`, `/api/contact`).
 - `midas.py` — the stdlib resolver CLI; `hydrate_depth.py` — ENA depth hydration.
-- `crossrepo.py` — cross-repository metadata search (live MGnify + NMDC adapters + canonical vocab + coverage query); `docs/crossrepo.md`.
+- `crossrepo.py` — cross-repository metadata search: MGnify/NMDC/ENA/dbGaP adapters (+ curatedMetagenomicData export-reader, Qiita/redbiom scaffold) + canonical vocab + coverage query; `docs/crossrepo.md`.
 - `discover.py` / `ingest.py` / `enrich.py` / `promote.py` — the auto-ingest pipeline (discover → hydrate → enrich → promote).
 - `datasets.tsv` / `datasets_hydrated.tsv` — the catalog (rows + ENA-computed depth and data-backed `strain_capable`).
 - `schema.yaml` — the record + the two resolver tables (question→data-profile, data-profile→pipeline).
