@@ -1,8 +1,16 @@
 # The microbiome metadata-reuse problem — and a trust-first approach
 
-Cross-study microbiome reuse keeps stalling on metadata. This note states the problem precisely, maps
-what's already been tried (so MiDAS innovates rather than reinvents), and lays out the approach — with a
-working first prototype (`metaqc.py`).
+**Where this comes from.** This started from a concrete need, not a grand plan: doing diet–microbiome–gut
+research with a dataset that isn't comprehensive enough on its own to carry a robust new finding, the
+natural move is to combine it with public data from trusted sources. But *finding* public data is the easy
+part — the real work is **searching, identifying, and validating** whether a given dataset can actually be
+used: does it carry the metadata the question needs, is it comparable to your own data, can you trust its
+labels? That is a common wall, so a solution built for one researcher's problem generalizes to anyone
+reusing public microbiome data.
+
+Framed generally: cross-study microbiome reuse keeps stalling on metadata. This note states the problem
+precisely, maps what's already been tried (so MiDAS innovates rather than reinvents), and lays out the
+approach — with working prototypes for each move.
 
 ## The problem, decomposed
 
