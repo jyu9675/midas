@@ -36,9 +36,11 @@ Stated plainly so the live catalog isn't mistaken for the full vision:
 - Per-record metadata fields + a pipeline recommendation; beta domain resolvers `/gut`, `/hiv`.
 - Auto-ingest pipeline (discover → hydrate → enrich → promote) with a human review gate.
 
-**Roadmap (the metadata-resolver vision — not yet built; don't infer it from the live catalog):**
-- **Cross-repository indexing** — point at curatedMetagenomicData, MGnify, Qiita, and NMDC, not just
-  ENA-seeded rows, so one query spans the public stores.
+**Roadmap (the metadata-resolver vision — partly started; don't infer the rest from the live catalog):**
+- **Cross-repository indexing** — *stage 1 built* (`crossrepo.py`): a live **MGnify** adapter + a
+  canonical metadata vocabulary + a "which datasets carry fields X, Y, Z" coverage query. NMDC (API
+  ready), ENA, curatedMetagenomicData (via R export), and Qiita (redbiom) are drop-in next.
+  See [docs/crossrepo.md](docs/crossrepo.md).
 - **Metadata-coverage resolver** — answer "which datasets carry fields X, Y, Z" (phenotype / clinical /
   diet / host / exposure) and flag how comparable those fields are across studies, since missing and
   inconsistent metadata is the field's main blocker to cross-study reuse.
@@ -48,6 +50,7 @@ Stated plainly so the live catalog isn't mistaken for the full vision:
 ## Files
 - `server.py` — FastAPI app: the UI (`static/`) + the live API (`/api/datasets`, `/api/discover`, `/api/ingest`, `/api/contact`).
 - `midas.py` — the stdlib resolver CLI; `hydrate_depth.py` — ENA depth hydration.
+- `crossrepo.py` — cross-repository metadata search (stage 1: live MGnify adapter + canonical vocab + coverage query); `docs/crossrepo.md`.
 - `discover.py` / `ingest.py` / `enrich.py` / `promote.py` — the auto-ingest pipeline (discover → hydrate → enrich → promote).
 - `datasets.tsv` / `datasets_hydrated.tsv` — the catalog (rows + ENA-computed depth and data-backed `strain_capable`).
 - `schema.yaml` — the record + the two resolver tables (question→data-profile, data-profile→pipeline).
@@ -60,6 +63,7 @@ python midas.py                 # resolver demo (strain / diet / ecology)
 python midas.py "strain sharing and diet"    # free-text -> detected questions
 python midas.py --list          # dump catalog
 python hydrate_depth.py         # refresh depth-backed strain_capable from ENA -> datasets_hydrated.tsv
+python crossrepo.py "human gut microbiome" --need disease,host_age   # cross-repo: which datasets carry these metadata (live MGnify)
 python ingest.py PRJNA288562    # auto-ingest stage 3: draft a row from ENA metadata
 python discover.py "vaginal rectal microbiome strain" --ingest   # stages 1-2(+3): question -> papers -> accessions -> drafts
 python enrich.py PRJNA826539 --write   # stage 4: fill residue into candidates.tsv (review gate; never auto-merged)

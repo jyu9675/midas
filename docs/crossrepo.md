@@ -1,0 +1,62 @@
+# Cross-repository metadata indexing
+
+The roadmap item that turns MiDAS from "resolver over a seeded catalog" into a **cross-repository
+metadata resolver**: one question reaches across the public microbiome repositories and answers the
+field's hardest question — *which datasets actually carry the metadata I need* (disease, host age, diet,
+antibiotics, body site, …), normalized so the same field means the same thing across sources.
+
+This is the gap every review names: cMD, MGnify, and Qiita all suffer *missing and inconsistent
+metadata*, so cross-study reuse stalls on "does this cohort even record what I need, comparably?".
+
+## Architecture (`crossrepo.py`, stdlib only)
+
+- **Adapters** — one per repository, each emitting the normalized `Dataset` record (the same shape as
+  MiDAS's catalog: body sites, assay, tri-state access, n, and a *canonical* metadata-field set).
+- **`CANON_METADATA`** — a MIxS-lite controlled vocabulary mapping each repo's heterogeneous field names
+  to shared canonical keys (`disease`, `host_age`, `diet`, `antibiotics`, `body_site`, `country`, …).
+  `normalize_metadata(raw_keys)` applies it with word-boundary matching (so "age" ≠ "storage",
+  "ph" ≠ "morphology").
+- **`cross_search(query, need=[...])`** — fans out to the chosen adapters, normalizes, and keeps the
+  datasets whose metadata **covers** every requested field; ranks by metadata richness then size.
+
+## Usage
+
+```bash
+python crossrepo.py "human gut microbiome"                         # what's there + normalized metadata
+python crossrepo.py "human gut microbiome" --need disease,host_age # only datasets carrying BOTH
+python crossrepo.py "human gut microbiome" --repos mgnify --json   # machine-readable rows
+```
+
+```python
+from crossrepo import cross_search
+hits = cross_search("human gut microbiome", need=["disease", "diet"], repos=["mgnify"])
+```
+
+## Built vs. staged
+
+**Built (stage 1, live):**
+- **MGnify** adapter — EBI metagenomics, open REST JSON:API. Aggregates per-sample structured fields +
+  the free key/value `sample-metadata` across a study's samples, infers host (human via host-tax-id
+  9606) and body sites, normalizes to the canonical vocabulary. Validated live and by offline fixtures
+  (`test_crossrepo.py`).
+- The canonical vocabulary + coverage query + CLI.
+
+**Staged (the interface is ready; each is a drop-in adapter):**
+- **NMDC** — `api.microbiomedata.org` (open REST, confirmed working); environmental-heavy but adds MIxS
+  biosample metadata.
+- **ENA** — MiDAS already queries it for run-level depth; formalize as an adapter so capability
+  (`strain_capable`) and metadata come through the same record.
+- **curatedMetagenomicData** — the richest *harmonized human* metadata, but R-package data; integrate via
+  the R-export pattern (a small script dumps `sampleMetadata` to TSV, the adapter reads it).
+- **Qiita** — metadata via `redbiom`; **dbGaP** — controlled, metadata behind governance.
+
+## Honest limits
+
+- The vocabulary is a **heuristic MIxS-lite layer**, not a finished ontology — it errs toward precision
+  (misses rather than mislabels) and should be reviewed/extended against real field dictionaries.
+- MGnify assembly studies often carry sparse metadata (collection date, geo, host) — richer cohort
+  metadata lives in the primary study/ENA sample attributes, which deeper hydration can pull.
+- Per-study sampling is capped (default 10 samples) to keep queries fast; a field present on only some
+  samples is still reported present.
+- This complements, not replaces, cMD's deep manual curation — MiDAS points *across* repos and says what
+  each carries; it does not re-curate.
