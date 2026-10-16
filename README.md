@@ -48,11 +48,15 @@ Stated plainly so the live catalog isn't mistaken for the full vision:
   inconsistent metadata is the field's main blocker to cross-study reuse.
 - **Controlled-vocabulary normalization** — align heterogeneous metadata to MIxS / MIMARKS so "diet",
   "antibiotics", and "disease status" mean the same thing across cohorts.
+- **Metadata QC / trust layer** — *started* (`metaqc.py`): cross-check deposited metadata against the data
+  itself (body-site triangulation flags likely-mislabeled samples), toward provenance/confidence-tiered
+  records and a resolve-time comparability score. See [docs/metadata-reuse.md](docs/metadata-reuse.md).
 
 ## Files
 - `server.py` — FastAPI app: the UI (`static/`) + the live API (`/api/datasets`, `/api/discover`, `/api/ingest`, `/api/contact`).
 - `midas.py` — the stdlib resolver CLI; `hydrate_depth.py` — ENA depth hydration.
 - `crossrepo.py` — cross-repository metadata search: MGnify/NMDC/ENA/dbGaP adapters (+ curatedMetagenomicData export-reader, Qiita/redbiom scaffold) + canonical vocab + coverage query; `docs/crossrepo.md`.
+- `metaqc.py` — metadata QC by triangulation: cross-checks a deposited body site against the taxonomy-inferred one (specificity-weighted, abstains when unsure) to flag **likely-mislabeled** samples; `docs/metadata-reuse.md`.
 - `discover.py` / `ingest.py` / `enrich.py` / `promote.py` — the auto-ingest pipeline (discover → hydrate → enrich → promote).
 - `datasets.tsv` / `datasets_hydrated.tsv` — the catalog (rows + ENA-computed depth and data-backed `strain_capable`).
 - `schema.yaml` — the record + the two resolver tables (question→data-profile, data-profile→pipeline).
