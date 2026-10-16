@@ -394,8 +394,13 @@ class CMD(Adapter):
             studies.setdefault(sn, []).append(r)
         out = []
         for sn, rs in studies.items():
-            hay = (sn + " " + " ".join(str(rs[0].get(c, "")) for c in
-                   ("body_site", "disease", "study_condition", "country"))).lower()
+            vals = {sn}
+            for rr in rs[:200]:          # aggregate across the study, not just the first row
+                for c in ("body_site", "disease", "study_condition", "target_condition", "country"):
+                    v = rr.get(c)
+                    if v:
+                        vals.add(str(v))
+            hay = " ".join(vals).lower()
             if terms and not any(t in hay for t in terms):
                 continue
             present = {c for c in cols if any(str(rr.get(c) or "").strip() not in ("", "NA")

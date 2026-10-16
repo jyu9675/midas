@@ -39,8 +39,9 @@ Stated plainly so the live catalog isn't mistaken for the full vision:
 **Roadmap (the metadata-resolver vision — partly started; don't infer the rest from the live catalog):**
 - **Cross-repository indexing** — built (`crossrepo.py`): live **MGnify + NMDC + ENA** adapters +
   **dbGaP** discovery (controlled) + a canonical metadata vocabulary + a "which datasets carry fields
-  X, Y, Z" coverage query, spanning sources from one query. **curatedMetagenomicData** via a one-line R
-  export (`MIDAS_CMD_TSV`); **Qiita**/redbiom scaffolded (server not reachable here). See
+  X, Y, Z" coverage query, spanning sources from one query. **curatedMetagenomicData** via
+  `scripts/cmd_from_curation.py` (no R) or a one-line R export, set `MIDAS_CMD_TSV` (validated on a real
+  5-study / 1,664-sample pull); **Qiita**/redbiom scaffolded (server unreachable here). See
   [docs/crossrepo.md](docs/crossrepo.md).
 - **Metadata-coverage resolver** — answer "which datasets carry fields X, Y, Z" (phenotype / clinical /
   diet / host / exposure) and flag how comparable those fields are across studies, since missing and

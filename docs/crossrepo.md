@@ -50,16 +50,21 @@ hits = cross_search("human gut microbiome", need=["disease", "diet"], repos=["mg
 All four validated live and by offline fixtures (`test_crossrepo.py`); one query spans them into one
 normalized record set.
 
-**Built, needs a local export (no clean no-auth path):**
-- **curatedMetagenomicData** — the richest *harmonized human* metadata, but R-package data.
-  `write_cmd_export_R()` emits the one-line R that dumps `sampleMetadata` to TSV; set `MIDAS_CMD_TSV` and
-  the adapter groups it by study and reports each populated column. The crown jewel once exported.
+**Built, needs a one-time metadata pull:**
+- **curatedMetagenomicData** — the richest *harmonized human* metadata: a single study routinely carries
+  **diet, BMI, disease, antibiotics, host age, sex, country, subject, timepoint**. Two ways to produce the
+  TSV the `cmd` adapter reads (`MIDAS_CMD_TSV`): **(a) no R** — `python scripts/cmd_from_curation.py`
+  fetches per-study `_sample.tsv` from the public curation repo and concatenates them (union of columns);
+  **(b) with R** — `write_cmd_export_R()` dumps the full `sampleMetadata`. Validated live on a 5-study /
+  1,664-sample pull (e.g. BedarfJR_2017 → 10 canonical metadata fields; an IBD coverage query resolves to
+  the studies carrying disease+host_age+sex).
 
 **Scaffolded (source not reachable from this build environment):**
-- **Qiita** — via `redbiom`; the public redbiom server was unreachable here, so the adapter is a
-  documented no-op (returns `[]`) rather than fabricate redbiom's wire format. Much Qiita content is also
-  deposited to ENA/EBI (already indexed). To finish: wire the redbiom metadata-category query against a
-  reachable `REDBIOM_HOST` and normalize its categories through the same `normalize_metadata`.
+- **Qiita** — via `redbiom`; every redbiom host tested returned a connection failure here (the general
+  Qiita web is up, but its metadata lives behind redbiom / OAuth), so the adapter is a documented no-op
+  (returns `[]`) rather than fabricate redbiom's wire format. Much Qiita content is also deposited to
+  ENA/EBI (already indexed). To finish: point `REDBIOM_HOST` at a reachable context, wire the redbiom
+  metadata-category query, and normalize its categories through the same `normalize_metadata`.
 
 ## Honest limits
 
