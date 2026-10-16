@@ -1,12 +1,20 @@
 # MiDAS — Microbiome Data & Analysis Search
 
-A question-driven **resolver + analysis-stack recommender** over public microbiome datasets.
-Given a real research question, it resolves which datasets are *biologically compatible* and which
-executable pipeline answers the question — turning days of literature/data/code hunting into minutes.
+A question-driven **metadata resolver for microbiome/gut datasets**. You ask a real research question —
+*"gut shotgun cohorts that also have dietary intake and disease status", "paired gut+vaginal with
+strain-capable depth", "longitudinal infant gut with antibiotic exposure"* — and MiDAS resolves **which
+public datasets actually carry the metadata you need**, whether the data is *capable* of answering it
+(depth, 16S vs shotgun, paired sites, longitudinal), and the executable pipeline that fits — turning days
+of literature/data/code hunting into minutes.
 
-**Not** another repository. It sits *on top of* SRA / ENA / dbGaP / Zenodo and encodes the compatibility
-judgment a domain expert makes by hand: body-site match → shotgun-vs-16S → **strain-resolution capability**
-→ metadata match → pipeline choice → cross-study reuse. The schema is institution-agnostic.
+**Not** another repository. It sits *on top of* the public stores (SRA / ENA / dbGaP / Zenodo today;
+curatedMetagenomicData / MGnify / Qiita / NMDC on the roadmap) and encodes the compatibility judgment a
+domain expert makes by hand: body-site → shotgun-vs-16S → **strain-resolution capability** → **metadata
+coverage & comparability** → pipeline choice → cross-study reuse. The schema is institution- and
+repository-agnostic.
+
+**Domain analyses plug in on top** of the resolver, which finds the data: **vmbdiet** (diet↔vaginal
+microbiome), **strainshare** (strain-sharing), **engrafttracker** (HSCT engraftment).
 
 **Live:** https://midas.nuwaslab.com — the resolver over the curated catalog plus live discovery (EuropePMC → ENA).
 Beta domain resolvers: `/gut` (gut MGE / resistome) and `/hiv` (HIV/SIV gut, strain-translocation feasibility).
@@ -16,6 +24,26 @@ Beta domain resolvers: `/gut` (gut MGE / resistome) and `/hiv` (HIV/SIV gut, str
 dataset can resolve strains — is stated in few papers, so MiDAS computes it from **ENA run-level base counts,
 WGS-filtered** (BioProjects routinely bundle 16S + shotgun). Access is **tri-state** (`open` / `controlled` /
 `request-only`), not boolean. Body-site / assay need a methods pass + a controlled-vocabulary normalizer.
+
+## What it resolves today vs. the roadmap
+
+Stated plainly so the live catalog isn't mistaken for the full vision:
+
+**Today (built & live):**
+- Resolves a curated + auto-discovered catalog; live discovery runs EuropePMC → ENA.
+- **Computes** dataset capability rather than scraping it: `strain_capable` from ENA run-level depth
+  (WGS-filtered), body-site/assay from a methods pass, **tri-state** access.
+- Per-record metadata fields + a pipeline recommendation; beta domain resolvers `/gut`, `/hiv`.
+- Auto-ingest pipeline (discover → hydrate → enrich → promote) with a human review gate.
+
+**Roadmap (the metadata-resolver vision — not yet built; don't infer it from the live catalog):**
+- **Cross-repository indexing** — point at curatedMetagenomicData, MGnify, Qiita, and NMDC, not just
+  ENA-seeded rows, so one query spans the public stores.
+- **Metadata-coverage resolver** — answer "which datasets carry fields X, Y, Z" (phenotype / clinical /
+  diet / host / exposure) and flag how comparable those fields are across studies, since missing and
+  inconsistent metadata is the field's main blocker to cross-study reuse.
+- **Controlled-vocabulary normalization** — align heterogeneous metadata to MIxS / MIMARKS so "diet",
+  "antibiotics", and "disease status" mean the same thing across cohorts.
 
 ## Files
 - `server.py` — FastAPI app: the UI (`static/`) + the live API (`/api/datasets`, `/api/discover`, `/api/ingest`, `/api/contact`).
