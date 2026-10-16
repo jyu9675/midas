@@ -46,7 +46,8 @@ CANON_METADATA = {
     "collection_date":["collection date", "sampling date", "date of collection"],
     "timepoint":      ["visit", "timepoint", "longitudinal", "day of", "week of", "trimester"],
     "body_site":      ["body site", "isolation source", "env material", "environment material",
-                       "sample type", "body product", "env broad scale", "env local scale"],
+                       "sample type", "body product", "env broad scale", "env local scale",
+                       "env medium", "habitat", "ecosystem", "collection site"],
     "host_species":   ["host taxid", "host tax id", "host species", "host organism",
                        "host common name", "host scientific name"],
     "ph":             ["ph"],
@@ -196,9 +197,77 @@ class MGnify(Adapter):
         ds.body_sites = sorted(sites)[:4]
 
 
+# --------------------------------------------------------------------------- NMDC adapter
+
+def _nmdc_val(v):
+    """NMDC stores many fields as nested value objects, e.g.
+    {"has_raw_value": "...", "term": {"name": "..."}}. Return the most human-readable scalar."""
+    if isinstance(v, dict):
+        term = v.get("term") or {}
+        return term.get("name") or v.get("has_raw_value") or ""
+    return v
+
+
+class NMDC(Adapter):
+    """National Microbiome Data Collaborative. Open REST; biosamples carry MIxS/ENVO metadata and link to
+    studies via `associated_studies`. Environmental-heavy (soil/water/engineered), but adds breadth."""
+    name = "nmdc"
+    API = "https://api.microbiomedata.org"
+    _VALUE_KEYS = ("collection_date", "geo_loc_name", "env_broad_scale", "env_local_scale",
+                   "env_medium", "habitat", "ecosystem", "ecosystem_category",
+                   "sample_collection_site", "lat_lon", "depth", "ncbi_taxonomy_name")
+
+    def search(self, query: str, limit: int = 5, timeout: int = 30) -> list:
+        studies = get_json(f"{self.API}/studies?per_page=100", timeout).get("results", [])
+        terms = [t for t in re.split(r"\W+", query.lower()) if len(t) > 2]
+
+        def score(st):
+            hay = " ".join(str(st.get(k, "")) for k in
+                           ("name", "title", "description", "ecosystem", "ecosystem_category",
+                            "ecosystem_type", "specific_ecosystem")).lower()
+            return sum(1 for t in terms if t in hay)
+
+        matched = sorted((s for s in studies if score(s) > 0), key=score, reverse=True)
+        return [self._study_to_dataset(st, timeout) for st in matched[:limit]]
+
+    def _study_to_dataset(self, st: dict, timeout: int) -> Dataset:
+        sid = st.get("id", "")
+        ds = Dataset(source_repo=self.name, accession=sid,
+                     title=(st.get("title") or st.get("name") or "")[:120],
+                     url=f"https://data.microbiomedata.org/details/study/{sid}", access="open",
+                     extra={"ecosystem": st.get("ecosystem")})
+        self._hydrate(ds, sid, timeout)
+        return ds
+
+    def _hydrate(self, ds: Dataset, sid: str, timeout: int, k: int = 10):
+        try:
+            bs = get_json(f"{self.API}/biosamples?per_page={k}&filter=associated_studies:{sid}", timeout)
+        except Exception:
+            return
+        ds.n_samples = int((bs.get("meta") or {}).get("count") or 0)
+        raw, sites, human = set(), set(), False
+        for b in bs.get("results", []):
+            for key in self._VALUE_KEYS:
+                if b.get(key):
+                    raw.add(key)
+            for key in ("env_medium", "env_local_scale", "env_broad_scale", "habitat",
+                        "sample_collection_site"):
+                val = _nmdc_val(b.get(key))
+                if val and not str(val).startswith("ENVO:"):
+                    sites.add(str(val))
+            tax = str(b.get("ncbi_taxonomy_name") or "").lower()
+            eco = " ".join(str(b.get(x, "")) for x in ("ecosystem", "ecosystem_category", "ecosystem_type")).lower()
+            if "homo sapiens" in tax or "human" in eco:
+                human = True
+        ds.raw_metadata_keys = sorted(raw)
+        ds.metadata_fields = normalize_metadata(raw)
+        ds.host = "human" if human else ("environmental" if sites else "unknown")
+        ds.body_sites = sorted(sites)[:4]
+
+
 # --------------------------------------------------------------------------- registry + cross search
 
-ADAPTERS = {MGnify.name: MGnify()}
+ADAPTERS = {MGnify.name: MGnify(), NMDC.name: NMDC()}
 
 
 def cross_search(query: str, need=(), repos=("mgnify",), limit: int = 5, timeout: int = 30) -> list:

@@ -34,16 +34,18 @@ hits = cross_search("human gut microbiome", need=["disease", "diet"], repos=["mg
 
 ## Built vs. staged
 
-**Built (stage 1, live):**
+**Built & live:**
 - **MGnify** adapter — EBI metagenomics, open REST JSON:API. Aggregates per-sample structured fields +
   the free key/value `sample-metadata` across a study's samples, infers host (human via host-tax-id
-  9606) and body sites, normalizes to the canonical vocabulary. Validated live and by offline fixtures
-  (`test_crossrepo.py`).
-- The canonical vocabulary + coverage query + CLI.
+  9606) and body sites, normalizes to the canonical vocabulary.
+- **NMDC** adapter — National Microbiome Data Collaborative, open REST. Client-side matches studies by
+  query terms, then pulls biosamples via `associated_studies`, resolving NMDC's nested ENVO value
+  objects (`{"term":{"name":...},"has_raw_value":"ENVO:..."}`) to readable body sites. Environmental-heavy
+  (soil/water/engineered) but adds real breadth.
+- The canonical vocabulary + coverage query + CLI. Both adapters validated live and by offline fixtures
+  (`test_crossrepo.py`); one query spans both sources into one normalized record set.
 
 **Staged (the interface is ready; each is a drop-in adapter):**
-- **NMDC** — `api.microbiomedata.org` (open REST, confirmed working); environmental-heavy but adds MIxS
-  biosample metadata.
 - **ENA** — MiDAS already queries it for run-level depth; formalize as an adapter so capability
   (`strain_capable`) and metadata come through the same record.
 - **curatedMetagenomicData** — the richest *harmonized human* metadata, but R-package data; integrate via

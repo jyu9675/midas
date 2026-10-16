@@ -38,8 +38,22 @@ SAMPLES = {"data": [
 ]}
 
 
+NMDC_STUDIES = {"results": [{"id": "nmdc:sty-test", "name": "Test gut study",
+    "title": "Human gut microbiome cohort", "description": "gut microbiome",
+    "ecosystem": "Host-associated", "ecosystem_category": "Human",
+    "ecosystem_type": "Digestive system"}]}
+NMDC_BIOSAMPLES = {"meta": {"count": 42}, "results": [{
+    "collection_date": {"has_raw_value": "2020-01-01"},
+    "geo_loc_name": {"has_raw_value": "USA"},
+    "env_medium": {"term": {"name": "feces"}, "has_raw_value": "ENVO:00002003"},
+    "ecosystem": "Host-associated", "ecosystem_category": "Human",
+    "ncbi_taxonomy_name": "Homo sapiens"}]}
+
+
 def fake_get_json(url, timeout=30):
-    return SAMPLES if "/samples" in url else STUDIES
+    if "microbiomedata.org" in url:                       # NMDC
+        return NMDC_BIOSAMPLES if "/biosamples" in url else NMDC_STUDIES
+    return SAMPLES if "/samples" in url else STUDIES       # MGnify
 
 
 cr.get_json = fake_get_json                 # stub the only network call
@@ -58,6 +72,18 @@ assert len(cr.cross_search("gut", repos=["mgnify"], need=["disease", "diet"])) =
     "dataset carries BOTH disease and diet -> kept"
 assert len(cr.cross_search("gut", repos=["mgnify"], need=["bmi"])) == 0, \
     "dataset has no BMI -> filtered out"
+
+# ---- 3b. NMDC adapter parsing (nested ENVO value objects, biosample->study link) ----
+nres = cr.cross_search("gut microbiome", repos=["nmdc"], limit=3)
+assert len(nres) == 1, "NMDC study matching the query terms should resolve"
+n = nres[0]
+assert n.source_repo == "nmdc" and n.host == "human" and n.n_samples == 42
+assert {"collection_date", "country", "body_site"}.issubset(n.metadata_fields)
+assert "feces" in n.body_sites, "ENVO value object term name should be used, not the ENVO id"
+
+# both repos answer one query -> merged, normalized record set
+both = cr.cross_search("gut microbiome", repos=["mgnify", "nmdc"], limit=3)
+assert {d.source_repo for d in both} == {"mgnify", "nmdc"}, "cross-repo search spans both sources"
 
 # ---- 4. serialization to a MiDAS-style row ----
 row = d.to_row()
