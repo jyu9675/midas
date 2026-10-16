@@ -52,6 +52,7 @@ is MiDAS's niche. Four moves:
 - **D. Self-validated inference with abstention.** Address the generalization caution directly: infer a
   field only when calibrated-confident, and **validate each inferred field against the datasets that *did*
   deposit it** (per-repo self-check), reporting measured accuracy — never an opaque guess.
+  **← prototyped: `selfvalidate.py`.**
 
 ## Prototype — body-site triangulation (`metaqc.py`, move A)
 
@@ -101,13 +102,32 @@ one); trust-filtering changes the coverage set; and — the payoff — relaxing 
 comparability decision** (metadata_overlap 0.67 → 1.00, poolability up) because a shared field exists only
 at the extracted tier. This is the layer that ties A, C, and the adapters into one trust-aware record.
 
-## Roadmap
-1. Extend triangulation beyond body site (host species, assay type, westernization proxy) — same pattern.
-2. ~~Attach provenance/trust to every field (move B)~~ — **built (`provenance.py`)**; next, have the
-   cross-repo adapters emit provenanced records natively (not just the flat `metadata_fields` set).
-3. ~~A resolve-time comparability score (move C)~~ — **built (`comparability.py`)**; next, fold the
-   per-feature batch-risk estimate deeper (platform/pipeline when recorded) and surface it in the resolver.
-4. Self-validated inference with per-repo accuracy and abstention (move D) — the one move still open.
+## Prototype — self-validated inference (`selfvalidate.py`, move D)
+
+`validate_inference(labeled, infer_fn)` measures an inference on the subset that *did* deposit the field:
+accuracy, non-abstention coverage, and whether it **beats the majority-class naive baseline** (the exact
+bar the generalization caution sets). `apply_inference(unlabeled, …, report)` fills missing values *only*
+if the inference cleared the bar, carrying the **measured accuracy** as confidence — which feeds move-B
+provenance as `method="inferred"`. `self_validated_body_site()` wires metaqc's body-site inference in.
+
+**Validated** (`test_selfvalidate.py`): on a 40-sample labeled cohort, body-site inference measures
+accuracy 1.0 vs a 0.5 baseline → TRUST, applies to unlabeled with that measured confidence, and abstains
+on a no-signal sample; a no-signal *labeled* set correctly fails the bar → abstain on all; and the measured
+confidence flows into the provenance record. Nothing is inferred unless it is *measured* to work, and how
+well it works **is** the confidence.
+
+## Roadmap — all four moves prototyped
+1. ~~Triangulation / mislabel audit (move A)~~ — **built (`metaqc.py`)**; next, extend beyond body site
+   (host species, assay type, westernization proxy) — same pattern.
+2. ~~Provenance / trust-tiered records (move B)~~ — **built (`provenance.py`)**; next, have the cross-repo
+   adapters emit provenanced records natively (not just the flat `metadata_fields` set).
+3. ~~Resolve-time comparability score (move C)~~ — **built (`comparability.py`)**; next, fold the
+   per-feature batch-risk estimate deeper (platform/pipeline when recorded).
+4. ~~Self-validated inference with abstention (move D)~~ — **built (`selfvalidate.py`)**; next, apply it
+   across real cross-repo cohorts and publish per-field measured accuracies.
+
+The four moves now form a working, trust-aware cross-repo metadata layer; the next phase is wiring them
+through the live resolver end-to-end and measuring on real repo cohorts at scale.
 
 ## Honest risks
 Inference generalization (hence abstention + self-validation, not black-box prediction); LLM hallucination

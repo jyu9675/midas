@@ -48,10 +48,11 @@ Stated plainly so the live catalog isn't mistaken for the full vision:
   inconsistent metadata is the field's main blocker to cross-study reuse.
 - **Controlled-vocabulary normalization** — align heterogeneous metadata to MIxS / MIMARKS so "diet",
   "antibiotics", and "disease status" mean the same thing across cohorts.
-- **Metadata QC / trust layer** — *3 of 4 moves built*: cross-check deposited metadata against the data
-  itself (`metaqc.py` — body-site triangulation flags likely-mislabeled samples), trust-tiered provenance
-  records (`provenance.py`), and resolve-time dataset-pair poolability (`comparability.py`). Remaining:
-  self-validated inference with abstention. See [docs/metadata-reuse.md](docs/metadata-reuse.md).
+- **Metadata QC / trust layer** — *all 4 moves prototyped*: cross-check deposited metadata against the
+  data itself (`metaqc.py` — body-site triangulation flags likely-mislabeled samples), trust-tiered
+  provenance records (`provenance.py`), resolve-time dataset-pair poolability (`comparability.py`), and
+  self-validated inference with abstention (`selfvalidate.py`). Next: wire them through the live resolver
+  and measure on real cohorts at scale. See [docs/metadata-reuse.md](docs/metadata-reuse.md).
 
 ## Files
 - `server.py` — FastAPI app: the UI (`static/`) + the live API (`/api/datasets`, `/api/discover`, `/api/ingest`, `/api/contact`).
@@ -60,6 +61,7 @@ Stated plainly so the live catalog isn't mistaken for the full vision:
 - `metaqc.py` — metadata QC by triangulation: cross-checks a deposited body site against the taxonomy-inferred one (specificity-weighted, abstains when unsure) to flag **likely-mislabeled** samples; `docs/metadata-reuse.md`.
 - `comparability.py` — resolve-time **poolability** score for a pair of datasets (host/body-site/assay gates + metadata overlap + batch-effect risk → "can these be pooled, and how?") before any download; `docs/metadata-reuse.md`.
 - `provenance.py` — **trust-tiered** metadata records: every value carries `(source, method, confidence)` over curated > deposited > extracted > inferred; trust-filtered coverage + agree/conflict triangulation (ties the QC + comparability layers together); `docs/metadata-reuse.md`.
+- `selfvalidate.py` — **self-validated** inference: fills a missing field only when the inference is *measured* to beat a naive baseline on datasets that did deposit it, reporting that measured accuracy as the confidence (abstains otherwise); `docs/metadata-reuse.md`.
 - `discover.py` / `ingest.py` / `enrich.py` / `promote.py` — the auto-ingest pipeline (discover → hydrate → enrich → promote).
 - `datasets.tsv` / `datasets_hydrated.tsv` — the catalog (rows + ENA-computed depth and data-backed `strain_capable`).
 - `schema.yaml` — the record + the two resolver tables (question→data-profile, data-profile→pipeline).
