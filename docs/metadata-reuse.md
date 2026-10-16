@@ -45,6 +45,7 @@ is MiDAS's niche. Four moves:
   to the open "audit/correct existing metadata against the data"). **← prototyped: `metaqc.py`.**
 - **B. Provenance / trust-tiered records.** Every value = `(value, source, method, confidence)`; the
   resolver filters by trust ("curated disease only" vs "include inferred, conf>0.8"). Honesty as a feature.
+  **← prototyped: `provenance.py`.**
 - **C. Resolve-time comparability score.** Flip batch correction from post-hoc to upfront: at discovery,
   output "these N cohorts are ~X% comparable on your needed fields; batch-effect risk Y; correctable via
   ConQuR / MMUPHin." **← prototyped: `comparability.py`.**
@@ -86,12 +87,27 @@ candidates)` orders a resolver's hits by poolability.
 by assay, batch "high" cross-repo); a **gut vs vaginal** pair is **0.00** (blocked by body site, not
 rescuable). This is the discovery-time "can I even pool these, and how?" decision, before any download.
 
+## Prototype — provenance / trust records (`provenance.py`, move B)
+
+`ProvenancedMetadata` holds, per canonical field, one `MetaField(value, source, method, confidence)` per
+source, over trust tiers **curated > deposited > extracted > inferred**. `best(field)` applies
+tier-then-confidence; `fields(min_method, min_confidence)` is the **trust-filtered coverage set** the
+resolver / comparability `need` check consumes; `triangulate(field)` reports agree/conflict (carrying
+move A as provenance). `from_dataset()` bridges a cross-repo record (cMD → curated, else deposited) and
+`add_inference()` attaches a metaqc-style computed value.
+
+**Validated** (`test_provenance.py`): tier ordering (a curated value beats a higher-confidence extracted
+one); trust-filtering changes the coverage set; and — the payoff — relaxing the trust floor **moves a
+comparability decision** (metadata_overlap 0.67 → 1.00, poolability up) because a shared field exists only
+at the extracted tier. This is the layer that ties A, C, and the adapters into one trust-aware record.
+
 ## Roadmap
 1. Extend triangulation beyond body site (host species, assay type, westernization proxy) — same pattern.
-2. Attach provenance/trust to every field in the cross-repo record (move B), filterable in the resolver.
+2. ~~Attach provenance/trust to every field (move B)~~ — **built (`provenance.py`)**; next, have the
+   cross-repo adapters emit provenanced records natively (not just the flat `metadata_fields` set).
 3. ~~A resolve-time comparability score (move C)~~ — **built (`comparability.py`)**; next, fold the
    per-feature batch-risk estimate deeper (platform/pipeline when recorded) and surface it in the resolver.
-4. Self-validated inference with per-repo accuracy and abstention (move D).
+4. Self-validated inference with per-repo accuracy and abstention (move D) — the one move still open.
 
 ## Honest risks
 Inference generalization (hence abstention + self-validation, not black-box prediction); LLM hallucination
